@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; color: white; background: transparent; }
+        .container { width: 350px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; }
+        .row { display: flex; align-items: center; margin: 5px 0; height: 35px; background: rgba(255,255,255,0.1); }
+        .player { background: rgba(255, 255, 255, 0.3); border: 1px solid yellow; }
+        .color-bar { width: 8px; height: 100%; margin-right: 10px; }
+        .name { flex-grow: 1; font-weight: bold; font-size: 18px; }
+        .points { width: 50px; text-align: right; font-family: monospace; font-size: 20px; padding-right: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container" id="leaderboard">
+        </div>
+
+    <script>
+        const socket = io();
+        socket.on('update_data', function(data) {
+            const container = document.getElementById('leaderboard');
+            container.innerHTML = '';
+            data.drivers.forEach(d => {
+                const row = document.createElement('div');
+                row.className = 'row' + (d.is_player ? ' player' : '');
+                row.innerHTML = `
+                    <div class="color-bar" style="background: ${d.color}"></div>
+                    <div class="name">${d.name}</div>
+                    <div class="points">${d.points}</div>
+                `;
+                container.appendChild(row);
+            });
+        });
+    </script>
+</body>
+</html>
