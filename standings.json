@@ -1,0 +1,12 @@
+{
+  "standings": {
+    "Jan Kowalski": 125,
+    "Adam Nowak": 110,
+    "Michal Wisniewski": 95
+  },
+  "teams": {
+    "Ferrari": "#FF0000",
+    "Mercedes": "#00FF00",
+    "Red Bull": "#0000FF"
+  }
+}
