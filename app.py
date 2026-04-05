@@ -53,36 +53,61 @@ def get_data():
 
             drivers_in_session.add(name)
 
-            team_bytes = getattr(v, 'mVehicleName', b'')
-            team = team_bytes.decode('utf-8', errors='ignore').split('\0', 1)[0].strip()
-            
+            veh_desc = getattr(v, 'mVehicleName', b'').decode('utf-8', errors='ignore').split('\0', 1)[0].strip()
+            team_color = "#808080"
+            for t_name, t_color in db.get('teams', {}).items():
+                if veh_desc.startswith(t_name):
+                    team_color = t_color
+                    break
+
             pos = getattr(v, 'mPlace', 0)
+
+            is_new = name not in db['standings']
             
             base_points = db['standings'].get(name, 0)
             live_points = 0
             if is_race and 1 <= pos <= len(POINT_SYSTEM):
                 live_points = POINT_SYSTEM[pos-1]
             
-            total_points = base_points + live_points
-            color = db['teams'].get(team, "#808080")
-            
             all_drivers.append({
                 "name": name,
-                "points": total_points,
-                "color": color,
-                "is_player": (name == players_name)
+                "base_points": base_points,
+                "live_points": live_points,
+                "total_points": base_points + live_points,
+                "color": team_color,
+                "is_player": (name == players_name),
+                "is_new": is_new
             })
 
         for db_name, db_points in db['standings'].items():
             if db_name not in drivers_in_session:
                 all_drivers.append({
                     "name": db_name,
-                    "points": db_points,
-                    "color": "#808080",
-                    "is_player": (db_name == players_name)
+                    "base_points": db_points,
+                    "live_points": 0,
+                    "total_points": db_points,
+                    "color": "#555555",
+                    "is_player": (db_name == players_name),
+                    "is_new": False
                 })
 
-        all_drivers.sort(key=lambda x: x['points'], reverse=True)
+        all_drivers.sort(key=lambda x: x['base_points'], reverse=True)
+        for index, d in enumerate(all_drivers):
+            d['start_pos'] = index + 1
+
+        all_drivers.sort(key=lambda x: x['total_points'], reverse=True)
+        for index, d in enumerate(all_drivers):
+            d['live_pos'] = index + 1
+            if d['is_new']:
+                d['pos_change'] = "🔵"
+            else:
+                diff = d['start_pos'] - d['live_pos']
+                if diff > 0:
+                    d['pos_change'] = f"▲{diff}"
+                elif diff < 0:
+                    d['pos_change'] = f"▼{abs(diff)}"
+                else:
+                    d['pos_change'] = ""
 
         try:
             p_idx = next(i for i, d in enumerate(all_drivers) if d['is_player'])
@@ -93,7 +118,10 @@ def get_data():
         if start + 7 > len(all_drivers):
             start = max(0, len(all_drivers) - 7)
             
-        return all_drivers[start:start+7]
+        return {
+            "drivers": all_drivers[start:start+7],
+            "is_race": is_race
+        }
         
     except Exception as e:
         print(f"Błąd odczytu w get_data: {e}")
@@ -103,7 +131,7 @@ def background_thread():
     while True:
         data = get_data()
         if data:
-            socketio.emit('update_data', {'drivers': data})
+            socketio.emit('update_data', data)
         socketio.sleep(1)
 
 @app.route('/')

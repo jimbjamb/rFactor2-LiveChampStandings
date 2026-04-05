@@ -1,33 +1,123 @@
 <!DOCTYPE html>
-<html>
+<html lang="pl">
 <head>
+    <meta charset="UTF-8">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; color: white; background: transparent; }
-        .container { width: 350px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; }
-        .row { display: flex; align-items: center; margin: 5px 0; height: 35px; background: rgba(255,255,255,0.1); }
-        .player { background: rgba(255, 255, 255, 0.3); border: 1px solid yellow; }
-        .color-bar { width: 8px; height: 100%; margin-right: 10px; }
-        .name { flex-grow: 1; font-weight: bold; font-size: 18px; }
-        .points { width: 50px; text-align: right; font-family: monospace; font-size: 20px; padding-right: 5px; }
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap');
+
+        body { 
+            font-family: 'Montserrat', sans-serif; 
+            color: white; 
+            background: transparent; 
+            margin: 0;
+            padding: 0;
+            width: 550px;
+            height: 400px;
+            overflow: hidden;
+        }
+
+        .container { 
+            width: 100%; 
+            height: 100%;
+            box-sizing: border-box;
+            background: rgba(5, 5, 10, 0.85); 
+            padding: 12px; 
+            border-radius: 8px; 
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0px 4px 15px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            text-align: center;
+            font-size: 22px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            flex-shrink: 0;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+            padding-bottom: 6px;
+        }
+
+        #leaderboard {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-evenly;
+        }
+
+        .row { 
+            display: grid; 
+            grid-template-columns: 45px 35px 8px 1fr 40px 80px; 
+            align-items: center; 
+            height: 41px; 
+            background: rgba(255,255,255,0.05); 
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .player { 
+            background: rgba(255, 0, 84, 0.1); 
+            border: 1px solid rgba(255, 0, 131, 0.5); 
+        }
+
+        .pos { text-align: center; font-weight: 800; font-size: 20px; color: #ddd; }
+        .change { text-align: left; font-size: 14px; font-weight: 700; }
+        .color-bar { height: 75%; border-radius: 3px; }
+        .name { padding-left: 15px; font-weight: 700; font-size: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .gained { text-align: right; font-size: 15px; font-weight: 700; color: #4ade80; padding-right: 10px; }
+        .total { text-align: center; font-size: 22px; font-weight: 800; background: rgba(0,0,0,0.4); border-radius: 4px; padding: 4px 0; margin-right: 4px; }
+
+        .up { color: #4ade80; } 
+        .down { color: #f87171; } 
+        .neutral { color: #9ca3af; } 
+        .new-driver { color: #60a5fa; font-size: 11px; letter-spacing: 1px;} 
+
     </style>
 </head>
 <body>
-    <div class="container" id="leaderboard">
-        </div>
+    <div class="container">
+        <div class="header" id="session-header">STANDINGS</div>
+        <div id="leaderboard"></div>
+    </div>
 
     <script>
         const socket = io();
         socket.on('update_data', function(data) {
+            
+            const header = document.getElementById('session-header');
+            header.innerText = data.is_race ? "LIVE STANDINGS" : "STANDINGS";
+
             const container = document.getElementById('leaderboard');
-            container.innerHTML = '';
+            container.innerHTML = ''; 
+            
             data.drivers.forEach(d => {
                 const row = document.createElement('div');
                 row.className = 'row' + (d.is_player ? ' player' : '');
+
+                let changeHtml = '';
+                if (d.pos_change === "NEW") {
+                    changeHtml = `<span class="change new-driver">NEW</span>`;
+                } else if (d.pos_change.includes('▲')) {
+                    changeHtml = `<span class="change up">${d.pos_change}</span>`;
+                } else if (d.pos_change.includes('▼')) {
+                    changeHtml = `<span class="change down">${d.pos_change}</span>`;
+                } else {
+                    changeHtml = `<span class="change neutral">${d.pos_change}</span>`;
+                }
+
+                let gainedText = d.live_points > 0 ? `+${d.live_points}` : '';
+
                 row.innerHTML = `
+                    <div class="pos">${d.live_pos}</div>
+                    ${changeHtml}
                     <div class="color-bar" style="background: ${d.color}"></div>
                     <div class="name">${d.name}</div>
-                    <div class="points">${d.points}</div>
+                    <div class="gained">${gainedText}</div>
+                    <div class="total">${d.total_points}</div>
                 `;
                 container.appendChild(row);
             });
